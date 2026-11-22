@@ -1,0 +1,18 @@
+[project]
+name = "valeur-marchande"
+version = "0.1.0"
+description = "Projet Python pour la data science (ENSAE) : valeur marchande des joueurs de football et note EA FC 27"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pandas>=2.2",
+    "pyarrow>=15",
+    "matplotlib>=3.8",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
