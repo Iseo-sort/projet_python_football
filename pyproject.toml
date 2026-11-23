@@ -12,6 +12,7 @@ dependencies = [
     "requests>=2.32.3",
     "beautifulsoup4>=4.12",
     "kagglehub>=0.3",
+    "s3fs>=2024.6.0",
 ]
 
 [build-system]

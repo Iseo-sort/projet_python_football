@@ -4,29 +4,37 @@
 - le panel : une ligne par joueur et par saison, pour étudier les variations de valeur.
 """
 
-from urllib.request import Request, urlopen
-
 import numpy as np
 import pandas as pd
+import requests
 
-from valeur_marchande import config
+from valeur_marchande import config, storage
 
 # Les tables dont on a besoin
 TABLES = ["players", "competitions", "player_valuations", "clubs", "appearances",
           "game_lineups"]
 
 
-def download_tables():
-    """Télécharge les tables (fichiers .csv.gz) dans data/raw/, si elles n'y sont pas déjà."""
+def download_tables(from_source=False):
+    """Télécharge les tables (fichiers .csv.gz) dans data/raw/, si elles n'y sont pas déjà.
+
+    Par défaut, on prend la copie figée du bucket (mêmes données pour tout le monde).
+    Avec from_source=True, on prend la dernière version publiée par la source, qui est
+    mise à jour chaque semaine (les résultats peuvent alors changer légèrement).
+    """
     config.RAW_DIR.mkdir(parents=True, exist_ok=True)
     for nom in TABLES:
         chemin = config.RAW_DIR / f"{nom}.csv.gz"
-        if not chemin.exists():
-            print(f"Téléchargement de {nom}...")
-            url = f"{config.BASE_URL}/{nom}.csv.gz"
-            requete = Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            with urlopen(requete) as reponse, open(chemin, "wb") as f:
-                f.write(reponse.read())
+        if chemin.exists():
+            continue
+        if not from_source:
+            storage.download_from_bucket(chemin)
+            continue
+        print(f"Téléchargement de {nom} depuis la source...")
+        reponse = requests.get(f"{config.BASE_URL}/{nom}.csv.gz",
+                               headers={"User-Agent": "Mozilla/5.0"}, timeout=600)
+        reponse.raise_for_status()
+        chemin.write_bytes(reponse.content)
 
 
 def load_tables():
@@ -243,23 +251,11 @@ def save_panel(df):
     df.to_parquet(config.PANEL_PATH, index=False)
 
 
-def _load(chemin, url):
-    """Charge un tableau : fichier local s'il existe, sinon URL publique du bucket."""
-    if chemin.exists():
-        return pd.read_parquet(chemin)
-    if url:
-        return pd.read_parquet(url)
-    raise FileNotFoundError(
-        f"{chemin.name} introuvable. Renseignez son URL (voir README) "
-        "ou lancez `python scripts/01_collect_transfermarkt.py`."
-    )
-
-
 def load_snapshot():
     """Charge le snapshot (une ligne par joueur). À appeler dans les notebooks."""
-    return _load(config.SNAPSHOT_PATH, config.SNAPSHOT_URL)
+    return storage.read_parquet(config.SNAPSHOT_PATH)
 
 
 def load_panel():
     """Charge le panel (une ligne par joueur et par saison). À appeler dans les notebooks."""
-    return _load(config.PANEL_PATH, config.PANEL_URL)
+    return storage.read_parquet(config.PANEL_PATH)

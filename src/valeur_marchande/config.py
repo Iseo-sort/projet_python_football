@@ -22,23 +22,24 @@ SEASONS = {
 LEAGUES = ["GB1", "ES1", "IT1", "L1", "FR1", "NL1", "PO1", "BE1", "TR1"]
 MAX_VALUATION_AGE_DAYS = 365    # on écarte les valeurs plus vieilles qu'un an
 
-# Fichier final (snapshot) et son URL publique sur le bucket
-SNAPSHOT_PATH = PROCESSED_DIR / "players_snapshot.parquet"
-SNAPSHOT_URL = os.environ.get("SNAPSHOT_URL", "")
-
-# Tableau « joueur x saison » (variations de valeur) et son URL publique
-PANEL_PATH = PROCESSED_DIR / "players_panel.parquet"
-PANEL_URL = os.environ.get("PANEL_URL", "")
+# Tableaux finaux
+SNAPSHOT_PATH = PROCESSED_DIR / "players_snapshot.parquet"   # une ligne par joueur
+PANEL_PATH = PROCESSED_DIR / "players_panel.parquet"         # une ligne par joueur et saison
 
 # Notes EA SPORTS FC : site officiel (édition en cours) et API (édition précédente)
 EA_RATINGS_URL = "https://www.ea.com/games/ea-sports-fc/ratings"
 EA_API_URL = "https://drop-api.ea.com/rating/ea-sports-fc"
 
-# Éditions récupérées sur Kaggle : (base, fichier, valeur de la colonne fifa_version)
+# Éditions récupérées sur Kaggle : (base, fichier, valeur de la colonne fifa_version).
+# La version de chaque base est fixée (« /versions/N ») : une mise à jour publiée
+# plus tard sur Kaggle ne change pas nos données.
 KAGGLE_DATASETS = {
-    "fifa23": ("stefanoleone992/ea-sports-fc-24-complete-player-dataset", "male_players.csv", 23),
-    "fc24": ("stefanoleone992/ea-sports-fc-24-complete-player-dataset", "male_players.csv", 24),
-    "fc25": ("nyagami/ea-sports-fc-25-database-ratings-and-stats", "male_players.csv", None),
+    "fifa23": ("stefanoleone992/ea-sports-fc-24-complete-player-dataset/versions/4",
+               "male_players.csv", 23),
+    "fc24": ("stefanoleone992/ea-sports-fc-24-complete-player-dataset/versions/4",
+             "male_players.csv", 24),
+    "fc25": ("nyagami/ea-sports-fc-25-database-ratings-and-stats/versions/5",
+             "male_players.csv", None),
 }
 
 # Édition EA sortie en septembre de chaque année (= note au début de la saison qui commence)
@@ -46,4 +47,9 @@ EA_EDITIONS = {2022: "fifa23", 2023: "fc24", 2024: "fc25", 2025: "fc26", 2026: "
 
 # Notes EA associées aux joueurs Transfermarkt (une ligne par joueur et par édition)
 EA_MATCHED_PATH = PROCESSED_DIR / "ea_ratings_matched.parquet"
-EA_MATCHED_URL = os.environ.get("EA_MATCHED_URL", "")
+
+# Copie figée des données (data/raw et data/processed) sur le stockage du SSP Cloud.
+# Le dossier « diffusion » du bucket est en lecture publique : pas besoin de compte.
+S3_ENDPOINT = "https://minio.lab.sspcloud.fr"
+BUCKET_PATH = "iseo/diffusion/projet_python_football"
+DATA_URL = os.environ.get("DATA_URL", f"{S3_ENDPOINT}/{BUCKET_PATH}")

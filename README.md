@@ -36,16 +36,22 @@ Les données ne sont pas dans Git. Le projet repose sur deux fichiers construits
 Un joueur fait partie de l'étude pour une saison s'il figure sur la feuille d'au moins un match
 d'un des championnats étudiés (titulaire ou remplaçant).
 
-**Construire le fichier depuis la source :**
+**Copie figée des données.** Les sources changent avec le temps (Transfermarkt est mis à jour chaque
+semaine, les sites d'EA changent d'édition chaque automne). Les fichiers bruts et les tableaux finaux
+sont donc déposés sur le stockage du SSP Cloud, en lecture publique :
+<https://minio.lab.sspcloud.fr/iseo/diffusion/projet_python_football/> (`raw/` et `processed/`).
+Les scripts et les notebooks y lisent les fichiers absents de `data/` : aucun compte n'est nécessaire.
+
+**Construire les tableaux :**
 
 ```bash
 python scripts/01_collect_transfermarkt.py
 ```
 
-Le script télécharge les tables de la source dans `data/raw/` puis écrit les deux fichiers dans `data/processed/`.
-La source est mise à jour chaque semaine : une reconstruction ultérieure peut donner des chiffres
-légèrement différents. Pour figer les données, les fichiers finaux sont déposés sur un bucket du SSP Cloud
-(URL publiques à renseigner dans `SNAPSHOT_URL` et `PANEL_URL`, variables d'environnement ou `config.py`).
+Le script récupère les tables brutes dans `data/raw/` (copie figée du bucket) puis écrit les deux
+fichiers dans `data/processed/`. Avec l'option `--source`, il les télécharge à la source : les chiffres
+peuvent alors différer légèrement. Pour mettre à jour la copie figée après une telle collecte :
+`python scripts/03_publish_data.py` (droits d'écriture sur le bucket nécessaires).
 
 **Notes EA SPORTS FC :**
 
@@ -53,8 +59,7 @@ légèrement différents. Pour figer les données, les fichiers finaux sont dép
 python scripts/02_collect_ea_fc.py
 ```
 
-Le script récupère les notes sur les sites officiels d'EA (≈ 200 pages par édition, environ 4 minutes
-chacune), garde les fichiers bruts dans `data/raw/`, puis associe chaque joueur EA à son identifiant
+Le script récupère les notes brutes de chaque édition dans `data/raw/` (copie figée du bucket), puis associe chaque joueur EA à son identifiant
 Transfermarkt et écrit `ea_ratings_matched.parquet` (une ligne par joueur et par édition) dans
 `data/processed/`.
 
@@ -62,18 +67,20 @@ Transfermarkt et écrit `ea_ratings_matched.parquet` (une ligne par joueur et pa
 |---|---|---|
 | FC 27 | 2026-27 (fin de 2025-26) | site des notes d'EA (édition en cours) |
 | FC 26 | 2025-26 | API du site des notes (édition précédente) |
-| FC 25 | 2024-25 | base Kaggle [nyagami](https://www.kaggle.com/datasets/nyagami/ea-sports-fc-25-database-ratings-and-stats) |
-| FIFA 23, FC 24 | 2022-23, 2023-24 | base Kaggle [stefanoleone992](https://www.kaggle.com/datasets/stefanoleone992/ea-sports-fc-24-complete-player-dataset) |
+| FC 25 | 2024-25 | base Kaggle [nyagami](https://www.kaggle.com/datasets/nyagami/ea-sports-fc-25-database-ratings-and-stats), version 5 |
+| FIFA 23, FC 24 | 2022-23, 2023-24 | base Kaggle [stefanoleone992](https://www.kaggle.com/datasets/stefanoleone992/ea-sports-fc-24-complete-player-dataset), version 4 |
 
-Pour les bases Kaggle, il faut un compte Kaggle et sa clé d'accès (kaggle.com → Settings → API →
+Avec l'option `--source`, il collecte les notes à la source : sites officiels d'EA (≈ 200 pages par
+édition, environ 4 minutes chacune) et Kaggle. Pour les bases Kaggle, il faut alors un compte Kaggle et sa clé d'accès (kaggle.com → Settings → API →
 *Generate New Token*), à placer **hors du dépôt** :
 
 ```bash
 mkdir -p ~/.kaggle && echo -n "<votre clé>" > ~/.kaggle/access_token && chmod 600 ~/.kaggle/access_token
 ```
 
-Le site et l'API d'EA changent d'édition chaque automne : les fichiers bruts déjà téléchargés
-doivent donc être conservés (le script s'arrête s'il ne trouve plus FC 27 sur le site).
+Le site et l'API d'EA changent d'édition chaque automne : une collecte à la source n'est possible que
+pendant l'année de l'édition (le script s'arrête s'il ne trouve plus FC 27 sur le site). La copie
+figée du bucket reste donc la référence.
 
 Le rapprochement se fait sur la date de naissance (à 2 jours près) et le nom (sans accents, nom d'usage,
 prénom ou initiale). Toutes les sources utilisent les identifiants de joueurs d'EA, qui ne changent pas

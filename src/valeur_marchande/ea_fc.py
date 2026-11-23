@@ -20,7 +20,7 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
-from valeur_marchande import config
+from valeur_marchande import config, storage
 
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 PAGE_SIZE = 100  # nombre de joueurs par page (maximum accepté par l'API)
@@ -62,15 +62,20 @@ def _page_fc26(numero):
 READERS = {"fc27": _page_fc27, "fc26": _page_fc26}
 
 
-def download_ratings(edition, pause=1.0):
+def download_ratings(edition, from_source=False, pause=1.0):
     """Télécharge toutes les notes d'une édition dans data/raw/, si elles n'y sont pas déjà.
 
-    Sites d'EA : on fait une pause entre deux pages pour ne pas surcharger le site
-    (≈ 180 à 200 pages, soit 3 à 4 minutes). Le fichier brut (JSON compressé) garde tout
-    ce que renvoie le site.
+    Par défaut, on prend la copie figée du bucket. Avec from_source=True, on collecte
+    depuis la source : les sites d'EA (qui changent d'édition chaque automne) ou Kaggle
+    (compte nécessaire). Sites d'EA : on fait une pause entre deux pages pour ne pas
+    surcharger le site (≈ 180 à 200 pages, soit 3 à 4 minutes). Le fichier brut (JSON
+    compressé) garde tout ce que renvoie le site.
     """
     chemin = raw_path(edition)
     if chemin.exists():
+        return
+    if not from_source:
+        storage.download_from_bucket(chemin)
         return
     if edition in config.KAGGLE_DATASETS:
         _download_kaggle(edition)
@@ -393,17 +398,9 @@ def save_matched(df):
 def load_matched(edition=None):
     """Charge les notes EA appariées (toutes les éditions, ou une seule).
 
-    Fichier local s'il existe, sinon URL publique du bucket.
+    Fichier local s'il existe, sinon copie du bucket.
     """
-    if config.EA_MATCHED_PATH.exists():
-        df = pd.read_parquet(config.EA_MATCHED_PATH)
-    elif config.EA_MATCHED_URL:
-        df = pd.read_parquet(config.EA_MATCHED_URL)
-    else:
-        raise FileNotFoundError(
-            f"{config.EA_MATCHED_PATH.name} introuvable. Renseignez EA_MATCHED_URL "
-            "(voir README) ou lancez `python scripts/02_collect_ea_fc.py`."
-        )
+    df = storage.read_parquet(config.EA_MATCHED_PATH)
     if edition is not None:
         df = df[df["edition"] == edition].reset_index(drop=True)
     return df
