@@ -1,4 +1,4 @@
-"""Télécharge les données Transfermarkt et construit le tableau final.
+"""Télécharge les données Transfermarkt et construit les tableaux d'analyse.
 
 Usage : python scripts/01_collect_transfermarkt.py
 """
@@ -11,4 +11,7 @@ snapshot = transfermarkt.build_snapshot(tables)
 transfermarkt.save_snapshot(snapshot)
 
 print(f"{len(snapshot)} joueurs enregistrés dans data/processed/players_snapshot.parquet")
-print(snapshot.head())
+
+panel = transfermarkt.build_panel(tables)
+transfermarkt.save_panel(panel)
+print(f"{len(panel)} lignes joueur x saison enregistrées dans data/processed/players_panel.parquet")
